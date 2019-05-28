@@ -91,13 +91,14 @@ if __name__ == '__main__':
     parser.add_argument('--use_tensorboard', type=str2bool, default=True)
 
     # Directories.
-    parser.add_argument('--celeba_image_dir', type=str, default='data/celeba/images')
-    parser.add_argument('--attr_path', type=str, default='data/celeba/list_attr_celeba.txt')
-    parser.add_argument('--rafd_image_dir', type=str, default='data/RaFD/train')
-    parser.add_argument('--log_dir', type=str, default='stargan/logs')
-    parser.add_argument('--model_save_dir', type=str, default='stargan/models')
-    parser.add_argument('--sample_dir', type=str, default='stargan/samples')
-    parser.add_argument('--result_dir', type=str, default='stargan/results')
+    GDRIVE_PATH = '/content/drive/\'My Drive\'/ml-stargan/'
+    parser.add_argument('--celeba_image_dir', type=str, default=GDRIVE_PATH+'data/celeba/images')
+    parser.add_argument('--attr_path', type=str, default=GDRIVE_PATH+'data/celeba/list_attr_celeba.txt')
+    parser.add_argument('--rafd_image_dir', type=str, default=GDRIVE_PATH+'data/RaFD/train')
+    parser.add_argument('--log_dir', type=str, default=GDRIVE_PATH+'stargan/logs')
+    parser.add_argument('--model_save_dir', type=str, default=GDRIVE_PATH+'stargan/models')
+    parser.add_argument('--sample_dir', type=str, default=GDRIVE_PATH+'stargan/samples')
+    parser.add_argument('--result_dir', type=str, default=GDRIVE_PATH+'stargan/results')
 
     # Step size.
     parser.add_argument('--log_step', type=int, default=10)
