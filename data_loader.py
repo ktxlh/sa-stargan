@@ -4,6 +4,8 @@ from torchvision.datasets import ImageFolder
 from PIL import Image
 import torch
 import os
+from os import listdir
+from os.path import isfile, join
 import random
 
 
@@ -21,12 +23,17 @@ class CelebA(data.Dataset):
         self.test_dataset = []
         self.attr2idx = {}
         self.idx2attr = {}
+        self.get_available_files()
         self.preprocess()
 
         if mode == 'train':
             self.num_images = len(self.train_dataset)
         else:
             self.num_images = len(self.test_dataset)
+
+    def get_available_files(self):
+        """Helper to get the set of files we have"""
+        self.filenames = listdir(self.image_dir)[:20000] ##################### TODO allow config
 
     def preprocess(self):
         """Preprocess the CelebA attribute file."""
@@ -44,16 +51,20 @@ class CelebA(data.Dataset):
             filename = split[0]
             values = split[1:]
 
+            if filename not in self.filenames:
+                continue
+
             label = []
             for attr_name in self.selected_attrs:
                 idx = self.attr2idx[attr_name]
                 label.append(values[idx] == '1')
 
-            if (i+1) < 2000:
+            if (i+1) < 2000:     ######################################## TODO allow config # 2000
                 self.test_dataset.append([filename, label])
             else:
                 self.train_dataset.append([filename, label])
-
+        print('Training set:',len(self.train_dataset))
+        print('Test set:',len(self.test_dataset))
         print('Finished preprocessing the CelebA dataset...')
 
     def __getitem__(self, index):

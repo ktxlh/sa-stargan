@@ -91,7 +91,7 @@ if __name__ == '__main__':
     parser.add_argument('--use_tensorboard', type=str2bool, default=True)
 
     # Directories.
-    GDRIVE_PATH = '/content/drive/\'My Drive\'/ml-stargan/'
+    GDRIVE_PATH = ''#/content/drive/My Drive/ml-stargan/
     parser.add_argument('--celeba_image_dir', type=str, default=GDRIVE_PATH+'data/celeba/images')
     parser.add_argument('--attr_path', type=str, default=GDRIVE_PATH+'data/celeba/list_attr_celeba.txt')
     parser.add_argument('--rafd_image_dir', type=str, default=GDRIVE_PATH+'data/RaFD/train')
