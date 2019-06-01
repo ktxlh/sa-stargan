@@ -5,7 +5,8 @@ from PIL import Image
 import torch
 import os
 from os import listdir
-from os.path import isfile, join
+import time
+import datetime
 import random
 
 
@@ -23,6 +24,7 @@ class CelebA(data.Dataset):
         self.test_dataset = []
         self.attr2idx = {}
         self.idx2attr = {}
+        self.filenames = []
         self.get_available_files()
         self.preprocess()
 
@@ -33,7 +35,15 @@ class CelebA(data.Dataset):
 
     def get_available_files(self):
         """Helper to get the set of files we have"""
-        self.filenames = listdir(self.image_dir)[:20000] ##################### TODO allow config
+
+        #n_file = 10000  ########################################################### TODO allow config
+        
+        start_time = time.time()
+        self.filenames = os.listdir(self.image_dir)#[:n_file]
+        
+        elapsed = time.time() - start_time
+        elapsed = str(datetime.timedelta(seconds=elapsed))
+        print("Iterated {} filenames; elapsed [{}]".format(len(self.filenames),elapsed))
 
     def preprocess(self):
         """Preprocess the CelebA attribute file."""

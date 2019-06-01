@@ -60,86 +60,60 @@ class Generator(nn.Module):
     def __init__(self, batch_size, image_size=64, c_dim=5, conv_dim=64):
         super(Generator, self).__init__()
         self.imsize = image_size
-        layerD1 = []
-        layerD2 = []
-        layerD3 = []
-        layerBN = []
-        layerU1 = []
-        layerU2 = []
-        layerU3 = []
-        last = []
         
-        ## Conv2d(in_channels, out_channels, kernel_size, stride=1, padding=0,...)
-        layerD1.append(SpectralNorm(nn.Conv2d(3+c_dim, conv_dim, 4, 2, 1)))
-        layerD1.append(nn.ReLU(inplace=True))
+        layer1 = []
+        # 3x64x64 -> 64x32x32
+        layer1.append(SpectralNorm(nn.Conv2d(3+c_dim, conv_dim, 4, 2, 1)))
+        layer1.append(nn.BatchNorm2d(conv_dim))
+        layer1.append(nn.ReLU(inplace=True))
 
         # Down-sampling layers.
         curr_dim = conv_dim
-        
-        layerD2.append(SpectralNorm(nn.Conv2d(curr_dim, curr_dim * 2, 4, 2, 1)))
-        layerD2.append(nn.ReLU(inplace=True))
+
+        # 64x32x32 -> 128x16x16
+        layer1.append(SpectralNorm(nn.Conv2d(curr_dim, curr_dim * 2, 4, 2, 1)))
+        layer1.append(nn.BatchNorm2d(curr_dim * 2))
+        layer1.append(nn.ReLU(inplace=True))
         curr_dim = curr_dim * 2
-
-        layerD3.append(SpectralNorm(nn.Conv2d(curr_dim, curr_dim * 2, 4, 2, 1)))
-        layerD3.append(nn.ReLU(inplace=True))
-        curr_dim = curr_dim * 2
-
-        #if self.imsize == 64:
-        #    layerD4 = []
-        #    layerD4.append(SpectralNorm(nn.Conv2d(curr_dim, curr_dim * 2, 4, 2, 1)))
-        #    layerD4.append(nn.ReLU(inplace=True))
-        #    self.lD4 = nn.Sequential(*layerD4)
-        #    curr_dim = curr_dim * 2
+        self.l1 = nn.Sequential(*layer1)
         
-        self.lD1 = nn.Sequential(*layerD1)
-        self.lD2 = nn.Sequential(*layerD2)
-        self.lD3 = nn.Sequential(*layerD3)
-        #self.attnD1 = Self_Attn( 256, 'relu')
-        #self.attnD2 = Self_Attn( 512, 'relu')
+        # 128x16x16
+        self.attn1 = Self_Attn( 128, 'relu') # 256
 
-        # TODO calculate dim after attention@@
-
-        # Bottleneck layers.
-        repeat_num = 1 #int(np.log2(self.imsize)) - 3
-        for i in range(repeat_num):  # 3 for imsize=image_size=64
-            layerBN.append(ResidualBlock(dim_in=curr_dim, dim_out=curr_dim))
-        self.BN = nn.Sequential(*layerBN)
+        # 128x16x16 -> 256x8x8
+        layer2 = []
+        layer2.append(SpectralNorm(nn.Conv2d(curr_dim, curr_dim * 2, 4, 2, 1)))
+        layer2.append(nn.BatchNorm2d(curr_dim * 2))
+        layer2.append(nn.ReLU(inplace=True))
+        curr_dim = curr_dim * 2
+        
+        # Bottleneck layers. For testing whether sa-stargan outperforms stargan
+        #repeat_num = 1 #int(np.log2(self.imsize)) - 3
+        #for _ in range(1):  # 3 for imsize=image_size=64
+        #    layers.append(ResidualBlock(dim_in=curr_dim, dim_out=curr_dim))
 
         # Up-sampling layers.
-        #mult = 4#2 ** (int(np.log2(self.imsize)) - 3) # 8. TODO Why does it work la QwQ
-        ## ConvTranspose2d(in_channels, out_channels, kernel_size, stride=1...)
-        layerU1.append(SpectralNorm(nn.ConvTranspose2d(curr_dim, curr_dim//2, 4, 2, 1))) # conv_dim*mult
-        layerU1.append(nn.BatchNorm2d(curr_dim//2)) # conv_dim*mult
-        layerU1.append(nn.ReLU())
-        curr_dim = curr_dim//2 # conv_dim*mult
+        # 256x8x8 -> 128x16x16
+        layer2.append(SpectralNorm(nn.ConvTranspose2d(curr_dim, curr_dim//2, 4, 2, 1)))
+        layer2.append(nn.BatchNorm2d(curr_dim//2))
+        layer2.append(nn.ReLU())
+        curr_dim = curr_dim//2
+        self.l2 = nn.Sequential(*layer2)
+        
+        # 128x16x16
+        self.attn2 = Self_Attn( 128, 'relu')
 
-        layerU2.append(SpectralNorm(nn.ConvTranspose2d(curr_dim, curr_dim//2, 4, 2, 1)))
-        layerU2.append(nn.BatchNorm2d(curr_dim//2))
-        layerU2.append(nn.ReLU())
+        # 128x16x16 -> 64x32x32
+        layer3 = []
+        layer3.append(SpectralNorm(nn.ConvTranspose2d(curr_dim, curr_dim//2, 4, 2, 1)))
+        layer3.append(nn.BatchNorm2d(curr_dim//2))
+        layer3.append(nn.ReLU())
         curr_dim = curr_dim//2
 
-        #layerU3.append(SpectralNorm(nn.ConvTranspose2d(curr_dim, curr_dim//2, 4, 2, 1)))
-        #layerU3.append(nn.BatchNorm2d(curr_dim//2))
-        #layerU3.append(nn.ReLU())
-        #curr_dim = curr_dim//2
+        layer3.append(nn.ConvTranspose2d(curr_dim, 3, 4, 2, 1))
+        layer3.append(nn.Tanh())
 
-        #if self.imsize == 64:
-        #    layerU4 = []
-        #    layerU4.append(SpectralNorm(nn.ConvTranspose2d(curr_dim, curr_dim//2, 4, 2, 1)))
-        #    layerU4.append(nn.BatchNorm2d(curr_dim//2))
-        #    layerU4.append(nn.ReLU())
-        #    self.lU4 = nn.Sequential(*layerU4)
-        #    curr_dim = curr_dim//2
-
-        self.lU1 = nn.Sequential(*layerU1)
-        self.lU2 = nn.Sequential(*layerU2)
-        #self.lU3 = nn.Sequential(*layerU3)
-        self.attnU1 = Self_Attn( 64, 'relu') # 128
-        #self.attnU2 = Self_Attn( 64,  'relu')
-
-        last.append(nn.ConvTranspose2d(curr_dim, 3, 4, 2, 1))
-        last.append(nn.Tanh())
-        self.last = nn.Sequential(*last)
+        self.l3 = nn.Sequential(*layer3)
 
 
     def forward(self, x, c):
@@ -149,26 +123,12 @@ class Generator(nn.Module):
         c = c.view(c.size(0), c.size(1), 1, 1)
         c = c.repeat(1, 1, x.size(2), x.size(3))
         x = torch.cat([x, c], dim=1)
-
-        out=self.lD1(x)
-        out=self.lD2(out)
-        out=self.lD3(out)
-        #out,pD1 = self.attnD1(out)
-        #out=self.lD4(out)
-        #out,pD2 = self.attnD2(out)
-
-        out=self.BN(out)
-        
-        out=self.lU1(out)
-        out=self.lU2(out)
-        #out=self.lU3(out)
-        out,pU1 = self.attnU1(out)
-        #out=self.lU4(out)
-        #out,pU2 = self.attnU2(out)
-        
-        out=self.last(out)
-
-        return out, 'pD1', 'pD2', pU1, 'pU2'
+        out = self.l1(x)
+        out, p1 = self.attn1(out)
+        out = self.l2(out)
+        out, p2 = self.attn2(out)
+        out = self.l3(out)
+        return out, 'pD1', 'pD2', 'pU1', 'pU2'
 
 
 class Discriminator(nn.Module):
@@ -177,50 +137,52 @@ class Discriminator(nn.Module):
     def __init__(self, batch_size=64, image_size=64, c_dim=5, conv_dim=64):
         super(Discriminator, self).__init__()
         self.imsize = image_size
+        
         layer1 = []
-        layer2 = []
-        layer3 = []
-        conv1 = []
-        conv2 = []
-
+        # 3x64x64 -> 64x32x32
         layer1.append(SpectralNorm(nn.Conv2d(3, conv_dim, 4, 2, 1)))
         layer1.append(nn.LeakyReLU(0.1))
 
         curr_dim = conv_dim
 
+        # 64x32x32 -> 128x16x16
+        layer1.append(SpectralNorm(nn.Conv2d(curr_dim, curr_dim * 2, 4, 2, 1)))
+        layer1.append(nn.LeakyReLU(0.1))
+        curr_dim = curr_dim * 2
+        self.l1 = nn.Sequential(*layer1)
+
+        # 128x16x16
+        self.attn1 = Self_Attn(128, 'relu')
+
+        layer2 = []
+        # 128x16x16 -> 256x8x8
         layer2.append(SpectralNorm(nn.Conv2d(curr_dim, curr_dim * 2, 4, 2, 1)))
         layer2.append(nn.LeakyReLU(0.1))
         curr_dim = curr_dim * 2
+        self.l2 = nn.Sequential(*layer2)
 
+        # 256x8x8
+        #self.attn2 = Self_Attn(256, 'relu')
+
+        # 256x8x8 -> 512x4x4
+        layer3 = []
         layer3.append(SpectralNorm(nn.Conv2d(curr_dim, curr_dim * 2, 4, 2, 1)))
         layer3.append(nn.LeakyReLU(0.1))
         curr_dim = curr_dim * 2
-
-        #if self.imsize == 64:   # TODO why 64????
-        #    layer4 = []
-        #    layer4.append(SpectralNorm(nn.Conv2d(curr_dim, curr_dim * 2, 4, 2, 1)))
-        #    layer4.append(nn.LeakyReLU(0.1))
-        #    self.l4 = nn.Sequential(*layer4)
-        #    curr_dim = curr_dim*2
-        self.l1 = nn.Sequential(*layer1)
-        self.l2 = nn.Sequential(*layer2)
         self.l3 = nn.Sequential(*layer3)
 
         #repeat_num = int(np.log2(self.imsize)) - 3 #TODO
         #kernel_size = int(image_size / np.power(2, repeat_num))
-        self.conv1 = nn.Conv2d(curr_dim, 1, kernel_size=8, stride=1, bias=False) #TODO kernal size was 3, padding=1
-        self.conv2 = nn.Conv2d(curr_dim, c_dim, kernel_size=8, bias=False) #TODO kernal size was kernel_size
-
-        self.attn1 = Self_Attn(256, 'relu') #TODO 256
-        #self.attn2 = Self_Attn(512, 'relu')
+        self.conv_scr = nn.Conv2d(curr_dim, 1,     kernel_size=4, bias=False) #TODO kernal size was 3, padding=1
+        self.conv_cls = nn.Conv2d(curr_dim, c_dim, kernel_size=4, bias=False) #TODO kernal size was kernel_size
+        
 
     def forward(self, x):
         out = self.l1(x)
+        out, p1 = self.attn1(out)
         out = self.l2(out)
+        #out, p2 = self.attn2(out)
         out = self.l3(out)
-        out,p1 = self.attn1(out)
-        #out=self.l4(out)    # TODO what if we don't have l4 @@ Change to code to allow 128 la
-        #out,p2 = self.attn2(out)
-        out_src = self.conv1(out)
-        out_cls = self.conv2(out)
-        return out_src, out_cls.view(out_cls.size(0), out_cls.size(1)), p1, 'p2'
+        out_src = self.conv_scr(out)
+        out_cls = self.conv_cls(out)
+        return out_src, out_cls.view(out_cls.size(0), out_cls.size(1)), 'p1', 'p2'

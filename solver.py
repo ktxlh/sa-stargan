@@ -243,7 +243,7 @@ class Solver(object):
             # Compute loss with real images.
             # dr1, dr2, df1, df2, gfd1, gfd2, gfu1, gfu2 are attention scores
             out_src, out_cls, dr1, dr2 = self.D(x_real)
-            d_loss_real = - torch.mean(out_src) 
+            d_loss_real = - torch.mean(out_src)  # TODO: flip labels
             d_loss_cls = self.classification_loss(out_cls, label_org, self.dataset)
 
             # Compute loss with fake images.
@@ -318,7 +318,8 @@ class Solver(object):
                 with torch.no_grad():
                     x_fake_list = [x_fixed]
                     for c_fixed in c_fixed_list:
-                        x_fake_list.append(self.G(x_fixed, c_fixed))
+                        x_fake,_,_,_,_ = self.G(x_fixed, c_fixed)
+                        x_fake_list.append(x_fake)
                     x_concat = torch.cat(x_fake_list, dim=3)
                     sample_path = os.path.join(self.sample_dir, '{}-images.jpg'.format(i+1))
                     save_image(self.denorm(x_concat.data.cpu()), sample_path, nrow=1, padding=0)
